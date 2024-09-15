@@ -38,32 +38,45 @@ class PackageManager:
         if not packages:
             return "# No packages to install."
 
-        # Prepare packages with versions etc.
-        formatted_packages = self.format_packages(packages)
+        # Separate packages into those with and without download URLs
+        packages_with_urls = [pkg for pkg in packages if pkg['download_url']]
+        packages_without_urls = [pkg for pkg in packages if not pkg['download_url']]
 
-        if self.platform in ["ubuntu", "debian"]:
-            return f"sudo apt-get update && sudo apt-get install -y {' '.join(formatted_packages)}"
-        elif self.platform in ["rhel", "centos", "fedora"]:
-            # RHEL/CentOS use yum or dnf
-            return f"sudo yum install -y {' '.join(formatted_packages)}"
-        elif self.platform == "arch":
-            return f"sudo pacman -Syu {' '.join(formatted_packages)} --noconfirm"
-        elif self.platform == "macos":
-            # Homebrew does not support specifying versions directly
-            packages_no_version = [pkg['name'] for pkg in packages]
-            install_commands = [
-                "# Check for Homebrew",
-                "if ! command -v brew &>/dev/null; then",
-                " echo \"Homebrew not found. Installing Homebrew...\"",
-                ' /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"',
-                " echo 'eval \"$(/opt/homebrew/bin/brew shellenv)\"' >> ~/.zprofile",
-                " eval \"$(/opt/homebrew/bin/brew shellenv)\"",
-                "fi",
-                f"brew install {' '.join(packages_no_version)}"
-            ]
-            return "\n".join(install_commands)
-        else:
-            return "# Unsupported platform for package installation."
+        commands = []
+
+        # Handle packages without custom download URLs
+        if packages_without_urls:
+            formatted_packages = self.format_packages(packages_without_urls)
+            if self.platform in ["ubuntu", "debian"]:
+                commands.append(f"sudo apt-get update && sudo apt-get install -y {' '.join(formatted_packages)}")
+            elif self.platform in ["rhel", "centos", "fedora"]:
+                commands.append(f"sudo yum install -y {' '.join(formatted_packages)}")
+            elif self.platform == "arch":
+                commands.append(f"sudo pacman -Syu {' '.join(formatted_packages)} --noconfirm")
+            elif self.platform == "macos":
+                packages_no_version = [pkg['name'] for pkg in packages_without_urls]
+                install_commands = [
+                    "# Check for Homebrew",
+                    "if ! command -v brew &>/dev/null; then",
+                    " echo \"Homebrew not found. Installing Homebrew...\"",
+                    ' /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"',
+                    " echo 'eval \"$(/opt/homebrew/bin/brew shellenv)\"' >> ~/.zprofile",
+                    " eval \"$(/opt/homebrew/bin/brew shellenv)\"",
+                    "fi",
+                    f"brew install {' '.join(packages_no_version)}"
+                ]
+                commands.append("\n".join(install_commands))
+            else:
+                commands.append("# Unsupported platform for package installation.")
+
+        # Handle packages with custom download URLs
+        for pkg in packages_with_urls:
+            download_command = f"wget {pkg['download_url']} -O /tmp/{pkg['name']}.tar.gz\n" \
+                               f"tar -xzf /tmp/{pkg['name']}.tar.gz -C /opt/\n" \
+                               f"sudo ln -s /opt/{pkg['name']}/bin/{pkg['name']} /usr/local/bin/{pkg['name']}"
+            commands.append(download_command)
+
+        return "\n".join(commands)
 
     def format_packages(self, packages):
         formatted_packages = []

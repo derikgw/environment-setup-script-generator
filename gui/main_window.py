@@ -1,7 +1,6 @@
 from PyQt5.QtWidgets import (
     QMainWindow, QAction, QVBoxLayout, QWidget, QInputDialog, QMessageBox, QComboBox,
-    QTableWidget, QTableWidgetItem, QPushButton, QHBoxLayout, QDialog,
-    QMenu, QAbstractItemView
+    QTableWidget, QTableWidgetItem, QPushButton, QHBoxLayout, QDialog, QMenu, QAbstractItemView
 )
 from PyQt5.QtCore import Qt
 from gui.settings_dialog import AddPackageDialog, AddEnvVarDialog, AddSymlinkDialog, LoadProfileDialog
@@ -15,7 +14,6 @@ import re
 
 # Import for sanitizing file names
 logging.basicConfig(level=logging.INFO)
-
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -147,8 +145,7 @@ class MainWindow(QMainWindow):
                 'repo_url': repo_url,
                 'download_url': download_url
             }
-            logging.info(
-                f"Updated package at row {row}: {name}, version: {version}, repo_url: {repo_url}, download_url: {download_url}")
+            logging.info(f"Updated package at row {row}: {name}, version: {version}, repo_url: {repo_url}, download_url: {download_url}")
 
     def _env_var_table_context_menu(self, position):
         menu = QMenu()
