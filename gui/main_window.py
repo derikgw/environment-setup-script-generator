@@ -1,10 +1,9 @@
 from PyQt5.QtWidgets import (
-    QMainWindow, QAction, QVBoxLayout, QWidget, QInputDialog, QMessageBox,
-    QComboBox, QTableWidget, QTableWidgetItem, QPushButton, QHBoxLayout, QDialog,
+    QMainWindow, QAction, QVBoxLayout, QWidget, QInputDialog, QMessageBox, QComboBox,
+    QTableWidget, QTableWidgetItem, QPushButton, QHBoxLayout, QDialog,
     QMenu, QAbstractItemView
 )
 from PyQt5.QtCore import Qt
-
 from gui.settings_dialog import AddPackageDialog, AddEnvVarDialog, AddSymlinkDialog, LoadProfileDialog
 from backend.package_manager import PackageManager
 from backend.script_generator import ScriptGenerator
@@ -12,9 +11,9 @@ from backend.archive_builder import ArchiveBuilder
 from database.db_manager import DBManager
 import os
 import logging
-import re  # Import for sanitizing file names
+import re
 
-# Configure logging
+# Import for sanitizing file names
 logging.basicConfig(level=logging.INFO)
 
 
@@ -53,40 +52,31 @@ class MainWindow(QMainWindow):
 
     def _create_menu(self):
         menu_bar = self.menuBar()
-
         # File Menu
         file_menu = menu_bar.addMenu("File")
         generate_action = QAction("Generate Setup", self)
         generate_action.triggered.connect(self._generate_setup)
         file_menu.addAction(generate_action)
-
         save_profile_action = QAction("Save Profile", self)
         save_profile_action.triggered.connect(self.save_profile)
         file_menu.addAction(save_profile_action)
-
         load_profile_action = QAction("Load Profile", self)
         load_profile_action.triggered.connect(self.load_profile)
         file_menu.addAction(load_profile_action)
-
         exit_action = QAction("Exit", self)
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
-
         # Settings Menu
         settings_menu = menu_bar.addMenu("Settings")
-
         add_package_action = QAction("Add Package", self)
         add_package_action.triggered.connect(self._add_package)
         settings_menu.addAction(add_package_action)
-
         add_env_var_action = QAction("Add Environment Variable", self)
         add_env_var_action.triggered.connect(self._add_env_var)
         settings_menu.addAction(add_env_var_action)
-
         add_symlink_action = QAction("Add Symlink", self)
         add_symlink_action.triggered.connect(self._add_symlink)
         settings_menu.addAction(add_symlink_action)
-
         # Help Menu
         help_menu = menu_bar.addMenu("Help")
         about_action = QAction("About", self)
@@ -125,18 +115,14 @@ class MainWindow(QMainWindow):
         self.add_package_btn = QPushButton("Add Package")
         self.add_package_btn.clicked.connect(self._add_package)
         btn_layout.addWidget(self.add_package_btn)
-
         self.add_env_var_btn = QPushButton("Add Env Var")
         self.add_env_var_btn.clicked.connect(self._add_env_var)
         btn_layout.addWidget(self.add_env_var_btn)
-
         self.add_symlink_btn = QPushButton("Add Symlink")
         self.add_symlink_btn.clicked.connect(self._add_symlink)
         btn_layout.addWidget(self.add_symlink_btn)
-
         layout.addLayout(btn_layout)
 
-    # Context Menu for Packages Table
     def _package_table_context_menu(self, position):
         menu = QMenu()
         remove_action = menu.addAction("Remove")
@@ -147,7 +133,6 @@ class MainWindow(QMainWindow):
                 self.packages_table.removeRow(row)
                 del self.packages[row]  # Remove from data structure
 
-    # Update self.packages when an item is changed
     def _package_item_changed(self, item):
         row = item.row()
         col = item.column()
@@ -165,7 +150,6 @@ class MainWindow(QMainWindow):
             logging.info(
                 f"Updated package at row {row}: {name}, version: {version}, repo_url: {repo_url}, download_url: {download_url}")
 
-    # Context Menu for Environment Variables Table
     def _env_var_table_context_menu(self, position):
         menu = QMenu()
         remove_action = menu.addAction("Remove")
@@ -178,7 +162,6 @@ class MainWindow(QMainWindow):
                 if key in self.env_vars:
                     del self.env_vars[key]  # Remove from data structure
 
-    # Update self.env_vars when an item is changed
     def _env_var_item_changed(self, item):
         row = item.row()
         if self.env_vars_table.item(row, 0) and self.env_vars_table.item(row, 1):
@@ -187,7 +170,6 @@ class MainWindow(QMainWindow):
             self.env_vars[key] = value
             logging.info(f"Updated environment variable: {key}={value}")
 
-    # Context Menu for Symlinks Table
     def _symlink_table_context_menu(self, position):
         menu = QMenu()
         remove_action = menu.addAction("Remove")
@@ -198,7 +180,6 @@ class MainWindow(QMainWindow):
                 self.symlinks_table.removeRow(row)
                 del self.symlinks[row]  # Remove from data structure
 
-    # Update self.symlinks when an item is changed
     def _symlink_item_changed(self, item):
         row = item.row()
         col = item.column()
@@ -302,7 +283,6 @@ class MainWindow(QMainWindow):
                 QMessageBox.critical(self, "Error", f"An error occurred while loading the profile: {str(e)}")
                 logging.error(f"Error loading profile '{profile_name}': {str(e)}")
 
-    # In db_manager.py, modify save_profile and load_profile methods
     def save_profile(self):
         """Save the current profile."""
         profile_name, ok = QInputDialog.getText(self, "Save Profile", "Enter profile name:")
@@ -338,41 +318,34 @@ class MainWindow(QMainWindow):
         if not self.packages and not self.env_vars and not self.symlinks:
             QMessageBox.warning(self, "No Configuration", "No packages, environment variables, or symlinks added.")
             return
-
         try:
             # Initialize the package manager and script generator based on selected platform
             package_manager = PackageManager(self.platform)
             script_generator = ScriptGenerator(package_manager, self.symlinks, self.env_vars)
-
             # Create output directory if it doesn't exist
             output_dir = "output"
             os.makedirs(output_dir, exist_ok=True)
-
             # Clean up the output directory
             for file in os.listdir(output_dir):
                 file_path = os.path.join(output_dir, file)
                 try:
                     if os.path.isfile(file_path):
                         os.unlink(file_path)
-                        logging.info(f"Removed old file '{file_path}' from output directory.")
+                    logging.info(f"Removed old file '{file_path}' from output directory.")
                 except Exception as e:
                     logging.error(f"Error removing file '{file_path}': {str(e)}")
-
             # Generate the install script
             script_name = "install.sh" if self.platform != "macos" else "install.command"
             script_path = os.path.join(output_dir, script_name)
             script_generator.generate_script(self.packages, script_path)
-
             # Create the archive with the generated files
             archive_builder = ArchiveBuilder(output_dir)
-
             # Sanitize profile name and OS for file name
             safe_profile_name = re.sub(r'[^\w\-]', '_', self.current_profile_name)
             safe_os_name = re.sub(r'[^\w\-]', '_', self.platform)
-
-            archive_name = f"{safe_profile_name}_{safe_os_name}_environment_setup.zip"  # Archive will be created in the current directory
+            archive_name = f"{safe_profile_name}_{safe_os_name}_environment_setup.zip"
+            # Archive will be created in the current directory
             archive_builder.create_archive(archive_name)
-
             QMessageBox.information(self, "Setup Generated", f"Setup generated and archived at {archive_name}")
             logging.info(f"Setup script and archive generated at {archive_name}")
         except Exception as e:

@@ -14,8 +14,7 @@ class PackageManager:
             import subprocess
             try:
                 result = subprocess.check_output(
-                    ["apt-cache", "policy", package_name],
-                    universal_newlines=True
+                    ["apt-cache", "policy", package_name], universal_newlines=True
                 )
                 return version in result
             except Exception as e:
@@ -25,8 +24,7 @@ class PackageManager:
             import subprocess
             try:
                 result = subprocess.check_output(
-                    ["yum", "--showduplicates", "list", package_name],
-                    universal_newlines=True
+                    ["yum", "--showduplicates", "list", package_name], universal_newlines=True
                 )
                 return version in result
             except Exception as e:
@@ -40,7 +38,7 @@ class PackageManager:
         if not packages:
             return "# No packages to install."
 
-        # Prepare packages with versions
+        # Prepare packages with versions etc.
         formatted_packages = self.format_packages(packages)
 
         if self.platform in ["ubuntu", "debian"]:
@@ -52,14 +50,14 @@ class PackageManager:
             return f"sudo pacman -Syu {' '.join(formatted_packages)} --noconfirm"
         elif self.platform == "macos":
             # Homebrew does not support specifying versions directly
-            packages_no_version = [name for name, _ in packages]
+            packages_no_version = [pkg['name'] for pkg in packages]
             install_commands = [
                 "# Check for Homebrew",
                 "if ! command -v brew &>/dev/null; then",
-                "    echo \"Homebrew not found. Installing Homebrew...\"",
-                '    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"',
-                "    echo 'eval \"$(/opt/homebrew/bin/brew shellenv)\"' >> ~/.zprofile",
-                "    eval \"$(/opt/homebrew/bin/brew shellenv)\"",
+                " echo \"Homebrew not found. Installing Homebrew...\"",
+                ' /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"',
+                " echo 'eval \"$(/opt/homebrew/bin/brew shellenv)\"' >> ~/.zprofile",
+                " eval \"$(/opt/homebrew/bin/brew shellenv)\"",
                 "fi",
                 f"brew install {' '.join(packages_no_version)}"
             ]
@@ -69,7 +67,9 @@ class PackageManager:
 
     def format_packages(self, packages):
         formatted_packages = []
-        for name, version in packages:
+        for pkg in packages:
+            name = pkg.get('name', '')
+            version = pkg.get('version', '')
             if version:
                 if self.platform in ["ubuntu", "debian"]:
                     # APT: package=version
@@ -92,11 +92,9 @@ class PackageManager:
     def generate_install_script(self, packages, output_file):
         # Use the appropriate shebang line based on the platform
         shebang = "#!/bin/bash\n" if self.platform != "macos" else "#!/bin/zsh\n"
-
         with open(output_file, "w") as f:
             f.write(shebang)
             # No package installation commands here; they will be added later
-            pass
 
         # Make script executable for UNIX-based systems
         os.chmod(output_file, 0o755)

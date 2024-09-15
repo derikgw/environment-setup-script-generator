@@ -14,16 +14,13 @@ class ScriptGenerator:
     def generate_script(self, packages, output_path):
         try:
             script_lines = []
-
             # Shebang
             script_lines.append("#!/bin/bash\n")
-
             # Enable error handling
             script_lines.append("# Exit immediately if a command exits with a non-zero status\n")
             script_lines.append("set -e\n")
-            script_lines.append("# Trap errors and handle them\n")
+            # Trap errors and handle them
             script_lines.append("trap 'echo \"An error occurred. Exiting...\"; exit 1;' ERR\n")
-
             # User Feedback
             script_lines.append('echo "Starting environment setup..."\n')
 
@@ -56,7 +53,7 @@ class ScriptGenerator:
             # Write the script to the output path
             with open(output_path, 'w') as script_file:
                 script_file.writelines(script_lines)
-                logging.info(f"Install script generated at {output_path}")
+            logging.info(f"Install script generated at {output_path}")
 
             # Make the script executable
             os.chmod(output_path, 0o755)
