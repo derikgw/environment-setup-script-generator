@@ -15,6 +15,23 @@ Base = declarative_base()
 
 
 # Define the Profile model
+from sqlalchemy import create_engine, Column, Integer, String, Text
+from sqlalchemy.orm import declarative_base, sessionmaker
+
+# Define the SQLite database URL
+DATABASE_URL = "sqlite:///env_setup.db"
+
+# Initialize the engine
+engine = create_engine(DATABASE_URL, echo=False)
+
+# Create a configured "Session" class
+SessionLocal = sessionmaker(bind=engine)
+
+# Create a Base class for declarative class definitions
+Base = declarative_base()
+
+
+# Define the Profile model
 class Profile(Base):
     __tablename__ = 'profiles'
 
@@ -24,6 +41,7 @@ class Profile(Base):
     packages = Column(Text)
     environment_variables = Column(Text)
     symlinks = Column(Text)
+    custom_commands = Column(Text)  # Add custom commands column
 
 
 # Function to initialize the database and create tables if they don't exist

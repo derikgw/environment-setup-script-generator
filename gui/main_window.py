@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import (
     QTableWidget, QTableWidgetItem, QPushButton, QHBoxLayout, QDialog, QMenu, QAbstractItemView
 )
 from PyQt5.QtCore import Qt
-from gui.settings_dialog import AddPackageDialog, AddEnvVarDialog, AddSymlinkDialog, LoadProfileDialog
+from gui.settings_dialog import AddPackageDialog, AddEnvVarDialog, AddSymlinkDialog, LoadProfileDialog, AddCommandDialog
 from backend.package_manager import PackageManager
 from backend.script_generator import ScriptGenerator
 from backend.archive_builder import ArchiveBuilder
@@ -21,10 +21,11 @@ class MainWindow(QMainWindow):
         self.db_manager = DBManager()  # Initialize the database manager
         # Default target platform
         self.platform = "ubuntu"
-        # Data storage for packages, env vars, and symlinks
+        # Data storage for packages, env vars, symlinks and custom commands
         self.packages = []
         self.env_vars = {}
         self.symlinks = []
+        self.custom_commands = []  # Add storage for custom commands
         # Current profile name
         self.current_profile_name = "default"
         # Set up the window
@@ -75,6 +76,9 @@ class MainWindow(QMainWindow):
         add_symlink_action = QAction("Add Symlink", self)
         add_symlink_action.triggered.connect(self._add_symlink)
         settings_menu.addAction(add_symlink_action)
+        add_command_action = QAction("Add Command", self)
+        add_command_action.triggered.connect(self._add_command)
+        settings_menu.addAction(add_command_action)
         # Help Menu
         help_menu = menu_bar.addMenu("Help")
         about_action = QAction("About", self)
@@ -108,6 +112,15 @@ class MainWindow(QMainWindow):
         self.symlinks_table.itemChanged.connect(self._symlink_item_changed)
         layout.addWidget(self.symlinks_table)
 
+        # Custom Commands Table
+        self.commands_table = QTableWidget(0, 2)
+        self.commands_table.setHorizontalHeaderLabels(["Description", "Command"])
+        self.commands_table.setEditTriggers(QAbstractItemView.DoubleClicked)
+        self.commands_table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.commands_table.customContextMenuRequested.connect(self._command_table_context_menu)
+        self.commands_table.itemChanged.connect(self._command_item_changed)
+        layout.addWidget(self.commands_table)
+
         # Buttons to Add Entries
         btn_layout = QHBoxLayout()
         self.add_package_btn = QPushButton("Add Package")
@@ -119,8 +132,12 @@ class MainWindow(QMainWindow):
         self.add_symlink_btn = QPushButton("Add Symlink")
         self.add_symlink_btn.clicked.connect(self._add_symlink)
         btn_layout.addWidget(self.add_symlink_btn)
+        self.add_command_btn = QPushButton("Add Command")
+        self.add_command_btn.clicked.connect(self._add_command)
+        btn_layout.addWidget(self.add_command_btn)
         layout.addLayout(btn_layout)
 
+    # Context Menu for Packages Table
     def _package_table_context_menu(self, position):
         menu = QMenu()
         remove_action = menu.addAction("Remove")
@@ -147,6 +164,7 @@ class MainWindow(QMainWindow):
             }
             logging.info(f"Updated package at row {row}: {name}, version: {version}, repo_url: {repo_url}, download_url: {download_url}")
 
+    # Context Menu for Environment Variables Table
     def _env_var_table_context_menu(self, position):
         menu = QMenu()
         remove_action = menu.addAction("Remove")
@@ -167,6 +185,7 @@ class MainWindow(QMainWindow):
             self.env_vars[key] = value
             logging.info(f"Updated environment variable: {key}={value}")
 
+    # Context Menu for Symlinks Table
     def _symlink_table_context_menu(self, position):
         menu = QMenu()
         remove_action = menu.addAction("Remove")
@@ -186,15 +205,39 @@ class MainWindow(QMainWindow):
             self.symlinks[row] = (link, target)
             logging.info(f"Updated symlink at row {row}: {link} -> {target}")
 
+    # Context Menu for Custom Commands Table
+    def _command_table_context_menu(self, position):
+        menu = QMenu()
+        remove_action = menu.addAction("Remove")
+        action = menu.exec_(self.commands_table.viewport().mapToGlobal(position))
+        if action == remove_action:
+            row = self.commands_table.currentRow()
+            if row >= 0:
+                self.commands_table.removeRow(row)
+                del self.custom_commands[row]  # Remove from data structure
+
+    def _command_item_changed(self, item):
+        row = item.row()
+        col = item.column()
+        if row < len(self.custom_commands):
+            description = self.commands_table.item(row, 0).text()
+            command = self.commands_table.item(row, 1).text()
+            self.custom_commands[row] = {
+                'description': description,
+                'command': command
+            }
+            logging.info(f"Updated command at row {row}: {description}, command: {command}")
+
     def _update_tables(self):
         """Updates the tables to display the current profile values."""
         # Disconnect signals to prevent recursive updates
         self.packages_table.blockSignals(True)
         self.env_vars_table.blockSignals(True)
         self.symlinks_table.blockSignals(True)
+        self.commands_table.blockSignals(True)
 
         # Update Packages Table
-        self.packages_table.setRowCount(0)  # Clear existing rows
+        self.packages_table.setRowCount(0)
         for package in self.packages:
             row_position = self.packages_table.rowCount()
             self.packages_table.insertRow(row_position)
@@ -208,7 +251,7 @@ class MainWindow(QMainWindow):
             self.packages_table.setItem(row_position, 3, QTableWidgetItem(download_url))
 
         # Update Environment Variables Table
-        self.env_vars_table.setRowCount(0)  # Clear existing rows
+        self.env_vars_table.setRowCount(0)
         for var, value in self.env_vars.items():
             row_position = self.env_vars_table.rowCount()
             self.env_vars_table.insertRow(row_position)
@@ -216,17 +259,28 @@ class MainWindow(QMainWindow):
             self.env_vars_table.setItem(row_position, 1, QTableWidgetItem(value))
 
         # Update Symlinks Table
-        self.symlinks_table.setRowCount(0)  # Clear existing rows
+        self.symlinks_table.setRowCount(0)
         for link, target in self.symlinks:
             row_position = self.symlinks_table.rowCount()
             self.symlinks_table.insertRow(row_position)
             self.symlinks_table.setItem(row_position, 0, QTableWidgetItem(link))
             self.symlinks_table.setItem(row_position, 1, QTableWidgetItem(target))
 
+        # Update Custom Commands Table
+        self.commands_table.setRowCount(0)
+        for command in self.custom_commands:
+            row_position = self.commands_table.rowCount()
+            self.commands_table.insertRow(row_position)
+            description = command['description']
+            cmd = command['command']
+            self.commands_table.setItem(row_position, 0, QTableWidgetItem(description))
+            self.commands_table.setItem(row_position, 1, QTableWidgetItem(cmd))
+
         # Reconnect signals
         self.packages_table.blockSignals(False)
         self.env_vars_table.blockSignals(False)
         self.symlinks_table.blockSignals(False)
+        self.commands_table.blockSignals(False)
 
     def _add_package(self):
         dialog = AddPackageDialog(self)
@@ -258,6 +312,14 @@ class MainWindow(QMainWindow):
         else:
             QMessageBox.warning(self, "Invalid Input", "Symlink link cannot be empty.")
 
+    def _add_command(self):
+        dialog = AddCommandDialog(self)
+        if dialog.exec_() == QDialog.Accepted:
+            command_data = dialog.get_command_data()
+            self.custom_commands.append(command_data)
+            logging.info(f"Added command: {command_data}")
+            self._update_tables()
+
     def load_profile(self):
         profiles = self.db_manager.get_all_profiles()
         dialog = LoadProfileDialog(self, profiles)
@@ -270,9 +332,11 @@ class MainWindow(QMainWindow):
                     self.packages = profile_data['packages']
                     self.env_vars = profile_data['env_vars']
                     self.symlinks = profile_data['symlinks']
+                    self.custom_commands = profile_data.get('custom_commands', [])
                     # Update UI elements to reflect the loaded data
                     self._update_tables()
-                    QMessageBox.information(self, "Profile Loaded", f"Profile '{profile_name}' loaded successfully!")
+                    QMessageBox.information(self, "Profile Loaded",
+                                            f"Profile '{profile_name}' loaded successfully!")
                     logging.info(f"Profile '{profile_name}' loaded and UI updated.")
                 else:
                     QMessageBox.warning(self, "Load Failed", f"Profile '{profile_name}' not found.")
@@ -290,10 +354,11 @@ class MainWindow(QMainWindow):
                 packages = self.packages
                 env_vars = self.env_vars
                 symlinks = self.symlinks
+                custom_commands = self.custom_commands
 
                 # Call db_manager to save the profile
                 success = self.db_manager.save_profile(
-                    profile_name, os_name, packages, env_vars, symlinks
+                    profile_name, os_name, packages, env_vars, symlinks, custom_commands
                 )
                 if success:
                     QMessageBox.information(self, "Profile Saved", f"Profile '{profile_name}' saved successfully!")
@@ -312,16 +377,19 @@ class MainWindow(QMainWindow):
         self.package_manager = PackageManager(self.platform)
 
     def _generate_setup(self):
-        if not self.packages and not self.env_vars and not self.symlinks:
-            QMessageBox.warning(self, "No Configuration", "No packages, environment variables, or symlinks added.")
+        if not self.packages and not self.env_vars and not self.symlinks and not self.custom_commands:
+            QMessageBox.warning(self, "No Configuration",
+                                "No packages, environment variables, symlinks, or commands added.")
             return
         try:
             # Initialize the package manager and script generator based on selected platform
             package_manager = PackageManager(self.platform)
-            script_generator = ScriptGenerator(package_manager, self.symlinks, self.env_vars)
+            script_generator = ScriptGenerator(package_manager, self.symlinks, self.env_vars, self.custom_commands)
+
             # Create output directory if it doesn't exist
             output_dir = "output"
             os.makedirs(output_dir, exist_ok=True)
+
             # Clean up the output directory
             for file in os.listdir(output_dir):
                 file_path = os.path.join(output_dir, file)
@@ -331,10 +399,12 @@ class MainWindow(QMainWindow):
                     logging.info(f"Removed old file '{file_path}' from output directory.")
                 except Exception as e:
                     logging.error(f"Error removing file '{file_path}': {str(e)}")
+
             # Generate the install script
             script_name = "install.sh" if self.platform != "macos" else "install.command"
             script_path = os.path.join(output_dir, script_name)
             script_generator.generate_script(self.packages, script_path)
+
             # Create the archive with the generated files
             archive_builder = ArchiveBuilder(output_dir)
             # Sanitize profile name and OS for file name
@@ -343,6 +413,7 @@ class MainWindow(QMainWindow):
             archive_name = f"{safe_profile_name}_{safe_os_name}_environment_setup.zip"
             # Archive will be created in the current directory
             archive_builder.create_archive(archive_name)
+
             QMessageBox.information(self, "Setup Generated", f"Setup generated and archived at {archive_name}")
             logging.info(f"Setup script and archive generated at {archive_name}")
         except Exception as e:

@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox, QComboBox
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox, QComboBox, QTextEdit
 )
 import logging
 
@@ -192,6 +192,7 @@ class AddSymlinkDialog(QDialog):
     def get_symlink(self):
         return self.link_name, self.target_path
 
+
 class LoadProfileDialog(QDialog):
     def __init__(self, parent=None, profiles=None):
         super().__init__(parent)
@@ -223,3 +224,55 @@ class LoadProfileDialog(QDialog):
 
     def get_selected_profile(self):
         return self.profile_dropdown.currentText()
+
+
+class AddCommandDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Add Command")
+        self.command_description = ""
+        self.command_text = ""
+
+        layout = QVBoxLayout()
+
+        # Command Description
+        description_layout = QHBoxLayout()
+        description_label = QLabel("Description:")
+        self.description_input = QLineEdit()
+        description_layout.addWidget(description_label)
+        description_layout.addWidget(self.description_input)
+        layout.addLayout(description_layout)
+
+        # Command Text
+        command_layout = QVBoxLayout()
+        command_label = QLabel("Command:")
+        self.command_input = QTextEdit()
+        command_layout.addWidget(command_label)
+        command_layout.addWidget(self.command_input)
+        layout.addLayout(command_layout)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+        add_button = QPushButton("Add")
+        add_button.clicked.connect(self.accept)
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(self.reject)
+        button_layout.addWidget(add_button)
+        button_layout.addWidget(cancel_button)
+        layout.addLayout(button_layout)
+
+        self.setLayout(layout)
+
+    def accept(self):
+        self.command_description = self.description_input.text().strip()
+        self.command_text = self.command_input.toPlainText().strip()
+        if not self.command_description or not self.command_text:
+            QMessageBox.warning(self, "Input Error", "Both description and command are required.")
+            return
+        super().accept()
+
+    def get_command_data(self):
+        return {
+            'description': self.command_description,
+            'command': self.command_text
+        }

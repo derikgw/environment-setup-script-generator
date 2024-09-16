@@ -6,10 +6,11 @@ logging.basicConfig(level=logging.INFO)
 
 
 class ScriptGenerator:
-    def __init__(self, package_manager, symlinks, env_vars):
+    def __init__(self, package_manager, symlinks, env_vars, custom_commands):
         self.package_manager = package_manager
         self.symlinks = symlinks
         self.env_vars = env_vars
+        self.custom_commands = custom_commands
 
     def generate_script(self, packages, output_path):
         try:
@@ -46,6 +47,14 @@ class ScriptGenerator:
                 install_command = self.package_manager.get_install_command(packages)
                 script_lines.append(install_command + "\n")
                 script_lines.append('echo "Packages installed."\n')
+
+            # Custom Commands
+            if self.custom_commands:
+                script_lines.append('echo "Executing custom commands..."\n')
+                for command in self.custom_commands:
+                    cmd = command['command']
+                    script_lines.append(cmd + "\n")
+                script_lines.append('echo "Custom commands executed."\n')
 
             # Completion message
             script_lines.append('echo "Environment setup completed successfully."\n')
