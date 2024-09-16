@@ -28,8 +28,11 @@ class ScriptGenerator:
             # Environment Variables
             if self.env_vars:
                 script_lines.append('echo "Setting environment variables..."\n')
+                shell_config_file = self._get_shell_config_file()
                 for key, value in self.env_vars.items():
-                    script_lines.append(f'export {key}="{value}"\n')
+                    script_lines.append(f'export {key}="{value["value"]}"\n')
+                    if value["append"]:
+                        script_lines.append(f'echo \'export {key}="{value["value"]}"\' >> {shell_config_file}\n')
                 script_lines.append('echo "Environment variables set."\n')
 
             # Symlink Creation
@@ -69,3 +72,11 @@ class ScriptGenerator:
         except Exception as e:
             logging.error(f"Error generating script: {str(e)}")
             raise e
+
+    def _get_shell_config_file(self):
+        if self.package_manager.platform in ["ubuntu", "debian", "rhel", "centos", "fedora", "arch"]:
+            return "~/.bashrc"
+        elif self.package_manager.platform == "macos":
+            return "~/.zshrc"
+        else:
+            return "~/.bashrc"

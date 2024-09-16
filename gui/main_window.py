@@ -258,7 +258,9 @@ class MainWindow(QMainWindow):
             row_position = self.env_vars_table.rowCount()
             self.env_vars_table.insertRow(row_position)
             self.env_vars_table.setItem(row_position, 0, QTableWidgetItem(var))
-            self.env_vars_table.setItem(row_position, 1, QTableWidgetItem(value))
+            self.env_vars_table.setItem(row_position, 1, QTableWidgetItem(value["value"]))
+            append_item = QTableWidgetItem("Yes" if value["append"] else "No")
+            self.env_vars_table.setItem(row_position, 2, append_item)
 
         # Update Symlinks Table
         self.symlinks_table.setRowCount(0)
@@ -293,13 +295,12 @@ class MainWindow(QMainWindow):
             self._update_tables()
 
     def _add_env_var(self):
-        key, ok1 = QInputDialog.getText(self, "Add Environment Variable", "Enter variable name:")
-        if ok1 and key:
-            value, ok2 = QInputDialog.getText(self, "Add Environment Variable", f"Enter value for '{key}':")
-            if ok2:
-                self.env_vars[key] = value
-                logging.info(f"Added environment variable: {key}={value}")
-                self._update_tables()
+        dialog = AddEnvVarDialog(self)
+        if dialog.exec_() == QDialog.Accepted:
+            key, value, append_to_shell = dialog.get_env_var()
+            self.env_vars[key] = {"value": value, "append": append_to_shell}
+            logging.info(f"Added environment variable: {key}={value}, append: {append_to_shell}")
+            self._update_tables()
 
     def _add_symlink(self):
         link, ok1 = QInputDialog.getText(self, "Add Symlink", "Enter link name:")

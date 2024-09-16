@@ -48,13 +48,11 @@ class DBManager:
                 packages = json.loads(profile.packages)
                 env_vars = {}
                 if profile.environment_variables:
-                    env_vars = dict(var.split('=', 1) for var in profile.environment_variables.split(','))
+                    env_vars = {var.split('=')[0]: {"value": var.split('=')[1], "append": False} for var in profile.environment_variables.split(',')}
                 symlinks = []
                 if profile.symlinks:
-                    symlinks = [tuple(link.split(':', 1)) for link in profile.symlinks.split(',')]
-                custom_commands = []
-                if profile.custom_commands:
-                    custom_commands = json.loads(profile.custom_commands)
+                    symlinks = [tuple(link.split(':')) for link in profile.symlinks.split(',')]
+                custom_commands = json.loads(profile.custom_commands) if profile.custom_commands else []
 
                 logging.info(f"Profile '{profile_name}' loaded from database.")
                 return {

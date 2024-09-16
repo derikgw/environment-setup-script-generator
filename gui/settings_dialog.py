@@ -1,11 +1,10 @@
 from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox, QComboBox, QTextEdit
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QTextEdit, QCheckBox, QMessageBox
 )
 import logging
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
-
 
 class AddPackageDialog(QDialog):
     def __init__(self, parent=None):
@@ -67,19 +66,12 @@ class AddPackageDialog(QDialog):
         self.package_version = self.version_input.text().strip()
         self.repo_url = self.repo_input.text().strip()
         self.download_url = self.download_input.text().strip()
-
         if not self.package_name:
             QMessageBox.warning(self, "Input Error", "Package name is required.")
             return
-
         if self.repo_url and self.download_url:
-            QMessageBox.warning(
-                self,
-                "Input Error",
-                "Please specify either a custom repository URL or a custom download URL, not both."
-            )
+            QMessageBox.warning(self, "Input Error", "Please specify either a custom repository URL or a custom download URL, not both.")
             return
-
         super().accept()
 
     def get_package_data(self):
@@ -97,6 +89,7 @@ class AddEnvVarDialog(QDialog):
         self.setWindowTitle("Add Environment Variable")
         self.variable_name = ""
         self.variable_value = ""
+        self.append_to_shell = False  # New attribute
 
         layout = QVBoxLayout()
 
@@ -116,6 +109,10 @@ class AddEnvVarDialog(QDialog):
         value_layout.addWidget(self.value_input)
         layout.addLayout(value_layout)
 
+        # Append to Shell Config
+        self.append_checkbox = QCheckBox("Append to Shell Config")
+        layout.addWidget(self.append_checkbox)
+
         # Buttons
         button_layout = QHBoxLayout()
         add_button = QPushButton("Add")
@@ -131,15 +128,14 @@ class AddEnvVarDialog(QDialog):
     def accept(self):
         self.variable_name = self.name_input.text().strip()
         self.variable_value = self.value_input.text().strip()
-
+        self.append_to_shell = self.append_checkbox.isChecked()
         if not self.variable_name:
             QMessageBox.warning(self, "Input Error", "Variable name is required.")
             return
-
         super().accept()
 
     def get_env_var(self):
-        return self.variable_name, self.variable_value
+        return self.variable_name, self.variable_value, self.append_to_shell
 
 
 class AddSymlinkDialog(QDialog):
@@ -182,48 +178,13 @@ class AddSymlinkDialog(QDialog):
     def accept(self):
         self.link_name = self.link_input.text().strip()
         self.target_path = self.target_input.text().strip()
-
         if not self.link_name or not self.target_path:
             QMessageBox.warning(self, "Input Error", "Both link name and target path are required.")
             return
-
         super().accept()
 
     def get_symlink(self):
         return self.link_name, self.target_path
-
-
-class LoadProfileDialog(QDialog):
-    def __init__(self, parent=None, profiles=None):
-        super().__init__(parent)
-        self.setWindowTitle("Load Profile")
-        self.profiles = profiles or []
-
-        layout = QVBoxLayout()
-
-        # Profile Dropdown
-        profile_layout = QHBoxLayout()
-        profile_label = QLabel("Select Profile:")
-        self.profile_dropdown = QComboBox()
-        self.profile_dropdown.addItems(self.profiles)
-        profile_layout.addWidget(profile_label)
-        profile_layout.addWidget(self.profile_dropdown)
-        layout.addLayout(profile_layout)
-
-        # Buttons
-        button_layout = QHBoxLayout()
-        load_button = QPushButton("Load")
-        load_button.clicked.connect(self.accept)
-        cancel_button = QPushButton("Cancel")
-        cancel_button.clicked.connect(self.reject)
-        button_layout.addWidget(load_button)
-        button_layout.addWidget(cancel_button)
-        layout.addLayout(button_layout)
-
-        self.setLayout(layout)
-
-    def get_selected_profile(self):
-        return self.profile_dropdown.currentText()
 
 
 class AddCommandDialog(QDialog):
@@ -276,3 +237,36 @@ class AddCommandDialog(QDialog):
             'description': self.command_description,
             'command': self.command_text
         }
+
+
+class LoadProfileDialog(QDialog):
+    def __init__(self, parent=None, profiles=None):
+        super().__init__(parent)
+        self.setWindowTitle("Load Profile")
+        self.profiles = profiles or []
+
+        layout = QVBoxLayout()
+
+        # Profile Dropdown
+        profile_layout = QHBoxLayout()
+        profile_label = QLabel("Select Profile:")
+        self.profile_dropdown = QComboBox()
+        self.profile_dropdown.addItems(self.profiles)
+        profile_layout.addWidget(profile_label)
+        profile_layout.addWidget(self.profile_dropdown)
+        layout.addLayout(profile_layout)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+        load_button = QPushButton("Load")
+        load_button.clicked.connect(self.accept)
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(self.reject)
+        button_layout.addWidget(load_button)
+        button_layout.addWidget(cancel_button)
+        layout.addLayout(button_layout)
+
+        self.setLayout(layout)
+
+    def get_selected_profile(self):
+        return self.profile_dropdown.currentText()
