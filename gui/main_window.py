@@ -15,6 +15,7 @@ import re
 # Import for sanitizing file names
 logging.basicConfig(level=logging.INFO)
 
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -162,7 +163,8 @@ class MainWindow(QMainWindow):
                 'repo_url': repo_url,
                 'download_url': download_url
             }
-            logging.info(f"Updated package at row {row}: {name}, version: {version}, repo_url: {repo_url}, download_url: {download_url}")
+            logging.info(
+                f"Updated package at row {row}: {name}, version: {version}, repo_url: {repo_url}, download_url: {download_url}")
 
     # Context Menu for Environment Variables Table
     def _env_var_table_context_menu(self, position):
@@ -328,15 +330,19 @@ class MainWindow(QMainWindow):
             try:
                 profile_data = self.db_manager.load_profile(profile_name)
                 if profile_data:
+                    self.current_profile_name = profile_name  # Update current profile name
                     self.platform = profile_data['os']
+                    # Update OS selector to reflect loaded profile
+                    os_index = next(
+                        (index for index, value in enumerate(self.os_options) if value.lower() == self.platform), 0)
+                    self.os_dropdown.setCurrentIndex(os_index)
                     self.packages = profile_data['packages']
                     self.env_vars = profile_data['env_vars']
                     self.symlinks = profile_data['symlinks']
                     self.custom_commands = profile_data.get('custom_commands', [])
                     # Update UI elements to reflect the loaded data
                     self._update_tables()
-                    QMessageBox.information(self, "Profile Loaded",
-                                            f"Profile '{profile_name}' loaded successfully!")
+                    QMessageBox.information(self, "Profile Loaded", f"Profile '{profile_name}' loaded successfully!")
                     logging.info(f"Profile '{profile_name}' loaded and UI updated.")
                 else:
                     QMessageBox.warning(self, "Load Failed", f"Profile '{profile_name}' not found.")

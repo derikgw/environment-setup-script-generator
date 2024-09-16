@@ -1,7 +1,10 @@
 from database.models import Profile, SessionLocal, initialize_database
 import logging
+from urllib.parse import quote, unquote
+import json
 
 logging.basicConfig(level=logging.INFO)
+
 
 class DBManager:
     def __init__(self):
@@ -11,8 +14,8 @@ class DBManager:
 
     def save_profile(self, profile_name, os_name, packages, env_vars, symlinks, custom_commands):
         try:
-            packages_str = ",".join([f"{pkg['name']}:{pkg['version']}:{pkg['repo_url']}:{pkg['download_url']}" for pkg in packages])
-            custom_commands_str = ",".join([f"{cmd['description']}:{cmd['command']}" for cmd in custom_commands])
+            packages_str = json.dumps(packages)
+            custom_commands_str = json.dumps(custom_commands)
             existing_profile = self.session.query(Profile).filter_by(profile_name=profile_name).first()
             if existing_profile:
                 existing_profile.os = os_name
@@ -42,9 +45,7 @@ class DBManager:
         try:
             profile = self.session.query(Profile).filter_by(profile_name=profile_name).first()
             if profile:
-                packages = [
-                    dict(zip(['name', 'version', 'repo_url', 'download_url'], pkg.split(':'))) for pkg in profile.packages.strip().split(',')
-                ]
+                packages = json.loads(profile.packages)
                 env_vars = {}
                 if profile.environment_variables:
                     env_vars = dict(var.split('=', 1) for var in profile.environment_variables.split(','))
@@ -53,7 +54,7 @@ class DBManager:
                     symlinks = [tuple(link.split(':', 1)) for link in profile.symlinks.split(',')]
                 custom_commands = []
                 if profile.custom_commands:
-                    custom_commands = [dict(zip(['description', 'command'], cmd.split(':', 1))) for cmd in profile.custom_commands.split(',')]
+                    custom_commands = json.loads(profile.custom_commands)
 
                 logging.info(f"Profile '{profile_name}' loaded from database.")
                 return {
