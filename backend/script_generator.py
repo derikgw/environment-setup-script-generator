@@ -4,7 +4,6 @@ import logging
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
-
 class ScriptGenerator:
     def __init__(self, package_manager, symlinks, env_vars, custom_commands):
         self.package_manager = package_manager
@@ -25,14 +24,23 @@ class ScriptGenerator:
             # User Feedback
             script_lines.append('echo "Starting environment setup..."\n')
 
+            shell_config_file = self._get_shell_config_file()
+
             # Environment Variables
             if self.env_vars:
                 script_lines.append('echo "Setting environment variables..."\n')
-                shell_config_file = self._get_shell_config_file()
                 for key, value in self.env_vars.items():
-                    script_lines.append(f'export {key}="{value["value"]}"\n')
+                    # Write logic to check if the variable already exists
+                    script_lines.append(f'if grep -q "export {key}=" {shell_config_file}; then\n')
+                    script_lines.append(f'  sed -i "" \'s/export {key}=.*$/export {key}="{value["value"]}"/\' {shell_config_file}\n')
+                    script_lines.append(f'  echo "Updated {key} in {shell_config_file}"\n')
+                    script_lines.append('else\n')
                     if value["append"]:
-                        script_lines.append(f'echo \'export {key}="{value["value"]}"\' >> {shell_config_file}\n')
+                        script_lines.append(f'  echo \'export {key}="{value["value"]}"\' >> {shell_config_file}\n')
+                    else:
+                        script_lines.append(f'  echo \'export {key}="{value["value"]}"\' >> {shell_config_file}\n')
+                    script_lines.append(f'  echo "Added {key} to {shell_config_file}"\n')
+                    script_lines.append('fi\n')
                 script_lines.append('echo "Environment variables set."\n')
 
             # Symlink Creation
