@@ -184,8 +184,12 @@ class MainWindow(QMainWindow):
         if self.env_vars_table.item(row, 0) and self.env_vars_table.item(row, 1):
             key = self.env_vars_table.item(row, 0).text()
             value = self.env_vars_table.item(row, 1).text()
-            self.env_vars[key] = value
-            logging.info(f"Updated environment variable: {key}={value}")
+            append_text = 'no'
+            if self.env_vars_table.item(row, 2):
+                append_text = self.env_vars_table.item(row, 2).text()
+            append = append_text.lower()
+            self.env_vars[key] = {"value": value, "append": append}
+            logging.info(f"Updated environment variable: {key}={value}, append: {append}")
 
     # Context Menu for Symlinks Table
     def _symlink_table_context_menu(self, position):
@@ -258,8 +262,8 @@ class MainWindow(QMainWindow):
             row_position = self.env_vars_table.rowCount()
             self.env_vars_table.insertRow(row_position)
             self.env_vars_table.setItem(row_position, 0, QTableWidgetItem(var))
-            self.env_vars_table.setItem(row_position, 1, QTableWidgetItem(value["value"]))
-            append_item = QTableWidgetItem("Yes" if value["append"] else "No")
+            self.env_vars_table.setItem(row_position, 1, QTableWidgetItem(value['value']))
+            append_item = QTableWidgetItem("Yes" if value['append'] else "No")
             self.env_vars_table.setItem(row_position, 2, append_item)
 
         # Update Symlinks Table
@@ -364,7 +368,6 @@ class MainWindow(QMainWindow):
             return profiles, selected_index
 
         profiles, selected_index = get_profile_names_and_selected_index()
-
         profile_name, ok = QInputDialog.getItem(self, "Save Profile", "Select or enter profile name:", profiles,
                                                 selected_index, True)
         if ok and profile_name:
@@ -372,7 +375,6 @@ class MainWindow(QMainWindow):
                 profile_name, ok = QInputDialog.getText(self, "Save Profile", "Enter new profile name:")
                 if not ok:
                     return  # User canceled the input
-
             try:
                 # Gather the necessary data to save the profile
                 os_name = self.platform
@@ -381,10 +383,12 @@ class MainWindow(QMainWindow):
                 symlinks = self.symlinks
                 custom_commands = self.custom_commands
 
+                logging.debug(
+                    f"Env Vars Before Saving Profile '{profile_name}': {env_vars}")  # Debugging environment variables
+
                 # Call db_manager to save the profile
-                success = self.db_manager.save_profile(
-                    profile_name, os_name, packages, env_vars, symlinks, custom_commands
-                )
+                success = self.db_manager.save_profile(profile_name, os_name, packages, env_vars, symlinks,
+                                                       custom_commands)
                 if success:
                     self.current_profile_name = profile_name  # Update current profile name
                     QMessageBox.information(self, "Profile Saved", f"Profile '{profile_name}' saved successfully!")
