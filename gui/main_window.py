@@ -351,9 +351,27 @@ class MainWindow(QMainWindow):
                 logging.error(f"Error loading profile '{profile_name}': {str(e)}")
 
     def save_profile(self):
-        """Save the current profile."""
-        profile_name, ok = QInputDialog.getText(self, "Save Profile", "Enter profile name:")
+        profiles = self.db_manager.get_all_profiles()
+        profiles.insert(0, "Save as New Profile")  # Option to save as a new profile
+
+        def get_profile_names_and_selected_index():
+            # Include the current profile name if it's available
+            try:
+                selected_index = profiles.index(self.current_profile_name)
+            except ValueError:
+                selected_index = 0  # Default to "Save as New Profile"
+            return profiles, selected_index
+
+        profiles, selected_index = get_profile_names_and_selected_index()
+
+        profile_name, ok = QInputDialog.getItem(self, "Save Profile", "Select or enter profile name:", profiles,
+                                                selected_index, True)
         if ok and profile_name:
+            if profile_name == "Save as New Profile":
+                profile_name, ok = QInputDialog.getText(self, "Save Profile", "Enter new profile name:")
+                if not ok:
+                    return  # User canceled the input
+
             try:
                 # Gather the necessary data to save the profile
                 os_name = self.platform
@@ -367,6 +385,7 @@ class MainWindow(QMainWindow):
                     profile_name, os_name, packages, env_vars, symlinks, custom_commands
                 )
                 if success:
+                    self.current_profile_name = profile_name  # Update current profile name
                     QMessageBox.information(self, "Profile Saved", f"Profile '{profile_name}' saved successfully!")
                     logging.info(f"Profile '{profile_name}' saved.")
                 else:
